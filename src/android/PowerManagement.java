@@ -45,6 +45,8 @@ public class PowerManagement extends CordovaPlugin {
 	private PowerManager.WakeLock wakeLock = null;
 	private PowerManager powerManager = null;
 	private boolean releaseOnPause = false;
+	private CordovaInterface cordova = null;
+	private Context appContext = null;
 
 	/**
 	 * Fetch a reference to the power-service when the plugin is initialized
@@ -52,7 +54,8 @@ public class PowerManagement extends CordovaPlugin {
 	@Override
 	public void initialize(CordovaInterface cordova, CordovaWebView webView) {
 		super.initialize(cordova, webView);
-
+        this.cordova = cordova;
+		this.appContext = cordova.getActivity().getApplicationContext();
 		this.powerManager = (PowerManager) cordova.getActivity().getSystemService(Context.POWER_SERVICE);
 	}
 
