@@ -24,7 +24,10 @@ import org.json.JSONArray;
 import org.json.JSONException;
 
 import android.content.Context;
+import android.content.Intent;
+import android.net.Uri;
 import android.os.PowerManager;
+import android.provider.Settings;
 import android.util.Log;
 
 import org.apache.cordova.CordovaWebView;
@@ -41,7 +44,7 @@ public class PowerManagement extends CordovaPlugin {
 	// As we only allow one wake-lock, we keep a reference to it here
 	private PowerManager.WakeLock wakeLock = null;
 	private PowerManager powerManager = null;
-	private boolean releaseOnPause = true;
+	private boolean releaseOnPause = false;
 
 	/**
 	 * Fetch a reference to the power-service when the plugin is initialized
@@ -65,10 +68,10 @@ public class PowerManagement extends CordovaPlugin {
 			if( action.equals("acquire") ) {
 				if( args.length() > 0 && args.getBoolean(0) ) {
 					Log.d("PowerManagementPlugin", "Only dim lock" );
-					result = this.acquire( PowerManager.SCREEN_DIM_WAKE_LOCK );
+					result = this.acquire( PowerManager.PARTIAL_WAKE_LOCK );
 				}
 				else {
-					result = this.acquire( PowerManager.FULL_WAKE_LOCK );
+					result = this.acquire( PowerManager.PARTIAL_WAKE_LOCK );
 				}
 			} else if( action.equals("release") ) {
 				result = this.release();
@@ -89,6 +92,23 @@ public class PowerManagement extends CordovaPlugin {
 		return true;
 	}
 
+	private PluginResult addAppToBatteryWhitelist () {
+    		PluginResult result = null;
+    		try {
+    			Intent intent = new Intent();
+    			intent.setAction(Settings.ACTION_REQUEST_IGNORE_BATTERY_OPTIMIZATIONS);
+    			intent.setData(Uri.parse("package:" + appContext.getPackageName()));
+    			intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
+    			appContext.startActivity(intent);
+
+    			result = new PluginResult(PluginResult.Status.OK);
+    		} catch (Exception e) {
+    			result = new PluginResult(PluginResult.Status.ERROR, "Could not add app to device battery optimization list. Error:" + e.getMessage());
+    		}
+
+    		return result;
+    	}
+
 	/**
 	 * Acquire a wake-lock
 	 * @param p_flags Type of wake-lock to acquire
@@ -100,6 +120,9 @@ public class PowerManagement extends CordovaPlugin {
 		if (this.wakeLock == null) {
 			this.wakeLock = this.powerManager.newWakeLock(p_flags, "PowerManagementPlugin");
 			try {
+			                if (android.os.Build.VERSION.SDK_INT >= 23) {
+            					addAppToBatteryWhitelist();
+            				}
 				this.wakeLock.acquire();
 				result = new PluginResult(PluginResult.Status.OK);
 			}
